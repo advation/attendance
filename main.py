@@ -17,10 +17,7 @@ def inputStudent():
 
     userExists = db.count((students.firstName == fName) & (students.lastName == lName))
     if userExists < 1:
-        numStudentsInGrade = int(len(db))
-        sNum = numStudentsInGrade + 1
-        studentId = str(sNum)
-
+        studentId = str(fName)+str(lName)+str(grade)
         print("Please confirm the following is correct:")
         print("Name: %s %s") % (fName, lName)
         print("Grade: %s") % grade
@@ -28,8 +25,8 @@ def inputStudent():
         a = raw_input("Is the student information correct? [Y/N]")
 
         if a == "y" or a == "Y":
-            if db.insert({'firstName':fName,'lastName':lName,'date':time.strftime("%d/%m/%Y"),'grade':grade,'barcode':studentId}):
-                genBarcode(studentId, fName, lName)
+            if db.insert({'firstName':fName.upper(),'lastName':lName.upper(),'date':time.strftime("%d/%m/%Y"),'grade':grade,'barcode':studentId.upper()}):
+                genBarcode(studentId.upper(), fName.upper(), lName.upper())
                 print(fName + " " + lName + " " + "saved!")
             else:
                 print("ERROR: Could not save student.")
@@ -48,47 +45,55 @@ def genBarcode(studentId,fName,lName):
     nameString = "barcodes/" + lName + "_" + fName
     tn.save(nameString)
 
-def printAllBarcodes():
+def genBarcodes():
     clearScreen()
     try:
-        os.system('montage -mode concatenate barcodes/*.png barcodes/barcodes.png')
-        try:
-            os.startfile("barcodes/barcodes.png","print")
-        except:
-            os.system("lpr barcodes/barcodes.png")
+        print("Generating PDF...")
+        os.system('montage -tile 3x8 -geometry 842x1190 -mode concatenate barcodes/*.png barcodes/barcodes.png')
+        time.sleep(5)
+        convertString = "convert barcodes/barcodes.png barcodes/pdf/%s.pdf" % time.strftime("%d-%m-%Y_%H%I%S")
+        os.system(convertString)
         os.system('rm barcodes/barcodes.png')
+        clearScreen()
+        print("Barcode PDF created!")
+        raw_input("Press Enter to continue...")
+        mainMenu()
     except:
-        pass
-
-    #mainMenu()
+        clearScreen()
+        raw_input("Press Enter to continue...")
+        mainMenu()
 
 def editStudent():
     clearScreen()
-
     print("=== Edit Student ===")
+    print("")
     print("1: Find by barcode")
-    print("2: Find by name")
-    print("3: Back to Main Menu")
+    print("2: Find by name [NOT WORKING]")
+    print("")
+    print("0: Back to Main Menu")
+    print("")
     mode = raw_input("Select a menu option: ")
 
     if(mode == '1'):
         editStudentByBarcode()
     elif(mode == '2'):
-        editStudentByName()
-    elif(mode == '3'):
+        editStudent()
+    elif(mode == '0'):
         mainMenu()
     else:
         editStudent()
 
 def editStudentByBarcode():
     clearScreen()
+    print("=== Edit Student ===")
+    print("")
     db = TinyDB('students.json')
     students = Query()
-    scannedBarcode = raw_input("Barcode: ")
-    scannedBarcodeNew = str(scannedBarcode[:1])
-
+    scannedBarcode = raw_input("Search by barcode: ")
+    scannedBarcodeNew = scannedBarcode[:-1]
+    print("Looking for: %s") % scannedBarcodeNew.upper()
     try:
-        student = db.get(students.barcode == scannedBarcodeNew)
+        student = db.get(students.barcode == scannedBarcodeNew.upper())
         oldFname = student['firstName']
         oldLname = student['lastName']
         oldGrade = student['grade']
@@ -102,14 +107,18 @@ def editStudentByBarcode():
         grade = raw_input(gradeString + ": ")
 
         if fName != "" and lName != "" and grade != "":
-            db.update({'firstName': fName,'lastName': lName,'grade':grade}, students.barcode == scannedBarcodeNew)
+            studentId = str(fName)+str(lName)+str(grade)
+            db.update({'firstName': fName.upper(),'lastName': lName.upper(),'grade':grade,'barcode':studentId.upper()}, students.barcode == scannedBarcodeNew.upper())
+            removeString = "rm barcodes/%s_%s.png" % (oldLname, oldFname)
+            os.system(removeString)
+            genBarcode(studentId.upper(), fName.upper(), lName.upper())
             print "Student record updated"
         else:
             print "Unable to update record. All fields are required."
             raw_input("Press Enter to continue...")
             editStudent()
-    except IndexError:
-        pass
+    except:
+        print "ERROR: Unable to find student record..."
 
     raw_input("Press Enter to continue...")
     mainMenu()
@@ -117,34 +126,104 @@ def editStudentByBarcode():
 def editStudentByName():
     pass
 
+def remove():
+    clearScreen()
+    db = TinyDB('students.json')
+    students = Query()
+    fName = raw_input("First Name: ").upper()
+    lName = raw_input("Last Name: ").upper()
+
+    print("Looking for: %s %s") % (fName,lName)
+    try:
+        student = db.get(students.firstName == fName and students.lastName == lName)
+        sBarcode = student['barcode']
+        oldFname = student['firstName']
+        oldLname = student['lastName']
+        oldGrade = student['grade']
+        print("Found student: %s %s in grade %s with barcode of %s") % (oldFname,oldLname,oldGrade,sBarcode)
+
+        a = raw_input("Would you like to remove this student? [Y/N]: ")
+        if a == "Y" or a == "y":
+            db.remove(students.barcode == sBarcode)
+            print("Student removed")
+            command = "rm barcodes/%s_%s.png" % (oldLname,oldFname)
+            os.system(command)
+            raw_input("Press Enter to continue...")
+            mainMenu()
+        else:
+            clearScreen()
+            mainMenu()
+    except:
+        print("Student record could not be found...")
+        raw_input("Press Enter to continue...")
+        mainMenu()
+
+def search():
+    pass
+
+def attendance(msg):
+    clearScreen()
+    print("=== Attendance ===")
+    print("Type 'EXIT' for the main menu.")
+    print("")
+    print(msg)
+    print("")
+    studentDB = TinyDB('students.json')
+    student = Query()
+    barcode = raw_input("Barcode: ").upper()
+
+    if barcode == "EXIT":
+        mainMenu()
+    else:
+        exists = studentDB.count((student.barcode == barcode))
+        if exists >= 1:
+            studentData = studentDB.get(student.barcode == barcode)
+            fName = str(studentData['firstName'])
+            lName = str(studentData['lastName'])
+            barcode = str(studentData['barcode'])
+            attendanceDB = TinyDB('attendance.json')
+            timeString = str(time.strftime("%d-%m-%Y_%H:%I:%S"))
+            attendanceDB.insert({"firstName":fName,"lastName":lName,"barcode":barcode,"date":timeString})
+            msg = "%s %s checked in!" % (str(fName),str(lName))
+        else:
+            msg = "ERROR: Could not find student record..."
+    attendance(msg)
 
 def mainMenu():
     clearScreen()
 
     print("=== Main Menu ===")
+    print("")
     print("1: Take Attendance")
     print("2: Add Student")
-    print("3: Edit Student")
+    print("3: Edit Student [KINDA WORKING]")
     print("4: Remove Student")
-    print("5: Print all barcodes")
-    print("6: Exit")
+    print("5: Search [NOT WORKING]")
+    print("6: Generate Barcode PDF [KINDA WORKING]")
+    print("7: Report [NOT WORKING]")
+    print("")
+    print("0: Exit")
+    print("")
     mode = raw_input("Select a menu option: ")
 
     if(mode == '1'):
-        mainMenu()
+        attendance("Ready for input")
     elif(mode == '2'):
         inputStudent()
     elif(mode == '3'):
         editStudent()
     elif(mode == '4'):
-        mainMenu()
+        remove()
     elif(mode == '5'):
-        printAllBarcodes()
+        mainMenu()
     elif(mode == '6'):
+        genBarcodes()
+    elif(mode == '7'):
+        mainMenu()
+    elif(mode == '0'):
         clearScreen()
         exit(0)
     else:
-        print("Invalid option...")
         mainMenu()
 
 mainMenu()
