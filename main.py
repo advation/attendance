@@ -88,7 +88,26 @@ def editStudentByBarcode():
     scannedBarcodeNew = str(scannedBarcode[:1])
 
     try:
-        db.get(students.barcode == "%s") % scannedBarcodeNew
+        student = db.get(students.barcode == scannedBarcodeNew)
+        oldFname = student['firstName']
+        oldLname = student['lastName']
+        oldGrade = student['grade']
+
+        fNameString = "First Name (%s)" % oldFname
+        lNameString = "Last Name (%s)" % oldLname
+        gradeString = "Grade (%s)" % oldGrade
+
+        fName = raw_input(fNameString + ": ")
+        lName = raw_input(lNameString + ": ")
+        grade = raw_input(gradeString + ": ")
+
+        if fName != "" and lName != "" and grade != "":
+            db.update({'firstName': fName,'lastName': lName,'grade':grade}, students.barcode == scannedBarcodeNew)
+            print "Student record updated"
+        else:
+            print "Unable to update record. All fields are required."
+            raw_input("Press Enter to continue...")
+            editStudent()
     except IndexError:
         pass
 
