@@ -48,6 +48,20 @@ def genBarcode(studentId,fName,lName):
     nameString = "barcodes/" + lName + "_" + fName
     tn.save(nameString)
 
+def printAllBarcodes():
+    clearScreen()
+    try:
+        os.system('montage -mode concatenate barcodes/*.png barcodes/barcodes.png')
+        try:
+            os.startfile("barcodes/barcodes.png","print")
+        except:
+            os.system("lpr barcodes/barcodes.png")
+        os.system('rm barcodes/barcodes.png')
+    except:
+        pass
+
+    #mainMenu()
+
 def editStudent():
     clearScreen()
 
@@ -70,28 +84,16 @@ def editStudentByBarcode():
     clearScreen()
     db = TinyDB('students.json')
     students = Query()
-    fName = raw_input("Students First Name: ")
-    lName = raw_input("Students Last Name: ")
-    grade = raw_input("Students Grade Level: ")
+    scannedBarcode = raw_input("Barcode: ")
+    scannedBarcodeNew = str(scannedBarcode[:1])
 
-    #Check if user exists
-    userExists = db.count((students.firstName == fName) & (students.lastName == lName))
-    if userExists < 1:
-
-        print("Please confirm the following is correct:")
-        print("Name: %s %s") % (fName, lName)
-        print("Grade: %s") % grade
-
-        a = raw_input("Is the student information correct? [Y/N]")
-
-        if a == "y" or a == "Y":
-            print "Submit the new data to the database"
-        else:
-            inputStudent()
-    else:
-        print("ERROR: Student already exists...")
+    try:
+        db.get(students.barcode == "%s") % scannedBarcodeNew
+    except IndexError:
+        pass
 
     raw_input("Press Enter to continue...")
+    mainMenu()
 
 def editStudentByName():
     pass
@@ -105,7 +107,8 @@ def mainMenu():
     print("2: Add Student")
     print("3: Edit Student")
     print("4: Remove Student")
-    print("5: Exit")
+    print("5: Print all barcodes")
+    print("6: Exit")
     mode = raw_input("Select a menu option: ")
 
     if(mode == '1'):
@@ -117,6 +120,8 @@ def mainMenu():
     elif(mode == '4'):
         mainMenu()
     elif(mode == '5'):
+        printAllBarcodes()
+    elif(mode == '6'):
         clearScreen()
         exit(0)
     else:
