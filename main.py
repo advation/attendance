@@ -1,4 +1,4 @@
-import sys, time, hashlib, os
+import sys, time, hashlib, os, re
 from tinydb import TinyDB, where, Query
 
 def clearScreen():
@@ -14,6 +14,10 @@ def inputStudent():
     fName = raw_input("Students First Name: ")
     lName = raw_input("Students Last Name: ")
     grade = raw_input("Grade Level: ")
+
+    fName = re.sub('[^A-Za-z0-9]+', '', fName)
+    lName = re.sub('[^A-Za-z0-9]+', '', lName)
+    grade = re.sub('[^0-9]+', '', grade)
 
     userExists = db.count((students.firstName == fName) & (students.lastName == lName))
     if userExists < 1:
