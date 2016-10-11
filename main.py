@@ -21,7 +21,7 @@ def inputStudent():
 
     userExists = db.count((students.firstName == fName) & (students.lastName == lName))
     if userExists < 1:
-        studentId = str(fName)+str(lName)+str(grade)
+        studentId = str(fName)+" "+str(lName)+" "+str(grade)
         print("Please confirm the following is correct:")
         print("Name: %s %s") % (fName, lName)
         print("Grade: %s") % grade
@@ -30,7 +30,6 @@ def inputStudent():
 
         if a == "y" or a == "Y":
             if db.insert({'firstName':fName.upper(),'lastName':lName.upper(),'date':time.strftime("%d/%m/%Y"),'grade':grade,'barcode':studentId.upper()}):
-                genBarcode(studentId.upper(), fName.upper(), lName.upper())
                 print(fName + " " + lName + " " + "saved!")
             else:
                 print("ERROR: Could not save student.")
@@ -42,30 +41,42 @@ def inputStudent():
     raw_input("Press Enter to continue...")
     mainMenu()
 
-def genBarcode(studentId,fName,lName):
-    import barcode
-    from barcode.writer import ImageWriter
-    tn = barcode.get('code39',studentId, writer=ImageWriter())
-    nameString = "barcodes/" + lName + "_" + fName
-    tn.save(nameString)
-
 def genBarcodes():
+    import webbrowser
     clearScreen()
-    try:
-        print("Generating PDF...")
-        os.system('montage -tile 3x8 -geometry 842x1190 -mode concatenate barcodes/*.png barcodes/barcodes.png')
-        time.sleep(5)
-        convertString = "convert barcodes/barcodes.png barcodes/pdf/%s.pdf" % time.strftime("%d-%m-%Y_%H%I%S")
-        os.system(convertString)
-        os.system('rm barcodes/barcodes.png')
-        clearScreen()
-        print("Barcode PDF created!")
-        raw_input("Press Enter to continue...")
-        mainMenu()
-    except:
-        clearScreen()
-        raw_input("Press Enter to continue...")
-        mainMenu()
+    #Create an HTML file that pulls the barcodes images down from a website.
+    f = open('barcodes.html', 'w')
+
+    db = TinyDB('students.json')
+
+    allStudents = db.all()
+    barcodes = []
+
+    for student in allStudents:
+        barcode = "<img src='http://barcode.advational.com/barcode.php?text=%s&print=true&size=50'>" % student["barcode"]
+        barcodes.append(barcode)
+
+    splitList = []
+    for i in range(0, len(barcodes), 3):
+        chunk = barcodes[i:i + 3]
+        splitList.append(chunk)
+
+    f.write("""<html><head><title>Barcodes</title></head><body onload="window.print()"><table width="100%" style="">""")
+    for row in splitList:
+        f.write("""<tr>""")
+        for barcode in row:
+            f.write("""<td style="text-align:center; padding-top:20px; border:1px #ccc dotted;">""")
+            f.write(barcode)
+            f.write("""</td>""")
+        f.write("""</tr>""")
+    f.write("""</table></body></html>""")
+    f.close()
+    print("Barcode file generated!!")
+    print("Opening web browser")
+    webbrowser.open("barcodes.html")
+    time.sleep(0.5)
+    clearScreen()
+    mainMenu()
 
 def editStudent():
     clearScreen()
@@ -94,10 +105,9 @@ def editStudentByBarcode():
     db = TinyDB('students.json')
     students = Query()
     scannedBarcode = raw_input("Search by barcode: ")
-    scannedBarcodeNew = scannedBarcode[:-1]
-    print("Looking for: %s") % scannedBarcodeNew.upper()
+    print("Looking for: %s") % scannedBarcode.upper()
     try:
-        student = db.get(students.barcode == scannedBarcodeNew.upper())
+        student = db.get(students.barcode == scannedBarcode.upper())
         oldFname = student['firstName']
         oldLname = student['lastName']
         oldGrade = student['grade']
@@ -112,10 +122,7 @@ def editStudentByBarcode():
 
         if fName != "" and lName != "" and grade != "":
             studentId = str(fName)+str(lName)+str(grade)
-            db.update({'firstName': fName.upper(),'lastName': lName.upper(),'grade':grade,'barcode':studentId.upper()}, students.barcode == scannedBarcodeNew.upper())
-            removeString = "rm barcodes/%s_%s.png" % (oldLname, oldFname)
-            os.system(removeString)
-            genBarcode(studentId.upper(), fName.upper(), lName.upper())
+            db.update({'firstName': fName.upper(),'lastName': lName.upper(),'grade':grade,'barcode':studentId.upper()}, students.barcode == scannedBarcode.upper())
             print "Student record updated"
         else:
             print "Unable to update record. All fields are required."
@@ -150,8 +157,6 @@ def remove():
         if a == "Y" or a == "y":
             db.remove(students.barcode == sBarcode)
             print("Student removed")
-            command = "rm barcodes/%s_%s.png" % (oldLname,oldFname)
-            os.system(command)
             raw_input("Press Enter to continue...")
             mainMenu()
         else:
@@ -203,7 +208,7 @@ def mainMenu():
     print("3: Edit Student [KINDA WORKING]")
     print("4: Remove Student")
     print("5: Search [NOT WORKING]")
-    print("6: Generate Barcode PDF [KINDA WORKING]")
+    print("6: Print Barcodes [Internet connection required]")
     print("7: Report [NOT WORKING]")
     print("")
     print("0: Exit")
