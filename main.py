@@ -3,9 +3,14 @@ from tinydb import TinyDB, where, Query
 
 def clearScreen():
     try:
+        os.system("cls")
+    except:
+        pass
+
+    try:
         os.system("clear")
     except:
-        os.system("cls")
+        pass
 
 def inputStudent():
     clearScreen()
