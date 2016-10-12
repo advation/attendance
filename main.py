@@ -74,8 +74,62 @@ def genBarcodes():
     print("Barcode file generated!!")
     print("Opening web browser")
     webbrowser.open("barcodes.html")
-    time.sleep(0.5)
+    time.sleep(2)
     clearScreen()
+    mainMenu()
+
+def printBarcodes():
+    clearScreen()
+    print("=== Print Barcode Options ===")
+    print("")
+    print("1: Print single barcode")
+    print("2: Print all barcodes")
+    print("")
+    print("0: Back to Main Menu")
+    print("")
+    mode = raw_input("Select a menu option: ")
+
+    if (mode == '1'):
+        genBarcode()
+    elif (mode == '2'):
+        genBarcodes()
+    elif (mode == '0'):
+        mainMenu()
+    else:
+        printBarcodes()
+
+def genBarcode():
+    import webbrowser
+    clearScreen()
+    #Create an HTML file that pulls the barcodes images down from a website.
+
+    fName = raw_input("First Name: ")
+    lName = raw_input("Last Name: ")
+
+    f = open('barcodes.html', 'w')
+
+    db = TinyDB('students.json')
+    students = Query()
+    try:
+        student = db.get((students.firstName == fName.upper()) & (students.lastName == lName.upper()))
+        barcode = student["barcode"]
+        barcode = "<img src='http://barcode.advational.com/barcode.php?text=%s&print=true&size=50'>" % barcode
+        f.write("""<html><head><title>Barcodes</title></head><body onload="window.print()"><table width="33%" style="margin-left:auto; margin-right:auto;">""")
+        f.write("""<tr>""")
+        f.write("""<td style="text-align:center; padding-top:20px; border:1px #ccc dotted;">""")
+        f.write(barcode)
+        f.write("""</td>""")
+        f.write("""</tr>""")
+        f.write("""</table></body></html>""")
+        f.close()
+        print("Barcode file generated!!")
+        print("Opening web browser")
+        webbrowser.open("barcodes.html")
+        time.sleep(2)
+        clearScreen()
+    except:
+        print("ERROR: Unable to find student record")
+    raw_input("Press ENTER to continue")
     mainMenu()
 
 def editStudent():
@@ -83,7 +137,7 @@ def editStudent():
     print("=== Edit Student ===")
     print("")
     print("1: Find by barcode")
-    print("2: Find by name [NOT WORKING]")
+    print("2: Find by name")
     print("")
     print("0: Back to Main Menu")
     print("")
@@ -92,7 +146,7 @@ def editStudent():
     if(mode == '1'):
         editStudentByBarcode()
     elif(mode == '2'):
-        editStudent()
+        editStudentByName()
     elif(mode == '0'):
         mainMenu()
     else:
@@ -121,7 +175,7 @@ def editStudentByBarcode():
         grade = raw_input(gradeString + ": ")
 
         if fName != "" and lName != "" and grade != "":
-            studentId = str(fName)+str(lName)+str(grade)
+            studentId = str(fName) + " " + str(lName) + " " + (grade)
             db.update({'firstName': fName.upper(),'lastName': lName.upper(),'grade':grade,'barcode':studentId.upper()}, students.barcode == scannedBarcode.upper())
             print "Student record updated"
         else:
@@ -135,7 +189,43 @@ def editStudentByBarcode():
     mainMenu()
 
 def editStudentByName():
-    pass
+    clearScreen()
+    print("=== Edit Student ===")
+    print("")
+    db = TinyDB('students.json')
+    students = Query()
+    firstName = raw_input("First Name: ")
+    lastName = raw_input("Last Name: ")
+    print("Looking for: %s %s") % (firstName.upper(), lastName.upper())
+    try:
+        student = db.get((students.firstName == firstName.upper()) & (students.lastName == lastName.upper()))
+        oldFname = student['firstName']
+        oldLname = student['lastName']
+        oldGrade = student['grade']
+
+        fNameString = "First Name (%s)" % oldFname
+        lNameString = "Last Name (%s)" % oldLname
+        gradeString = "Grade (%s)" % oldGrade
+
+        fName = raw_input(fNameString + ": ")
+        lName = raw_input(lNameString + ": ")
+        grade = raw_input(gradeString + ": ")
+
+        if fName != "" and lName != "" and grade != "":
+            studentId = str(fName) + " " + str(lName) + " " + (grade)
+            db.update(
+                {'firstName': fName.upper(), 'lastName': lName.upper(), 'grade': grade, 'barcode': studentId.upper()},
+                (students.firstName == firstName.upper()) & (students.lastName == lastName.upper()))
+            print "Student record updated"
+        else:
+            print "Unable to update record. All fields are required."
+            raw_input("Press Enter to continue...")
+            editStudent()
+    except:
+        print "ERROR: Unable to find student record..."
+
+    raw_input("Press Enter to continue...")
+    mainMenu()
 
 def remove():
     clearScreen()
@@ -168,7 +258,33 @@ def remove():
         mainMenu()
 
 def search():
-    pass
+    clearScreen()
+    print("=== Search Student ===")
+    print("")
+    db = TinyDB('students.json')
+    students = Query()
+    firstName = raw_input("First Name: ")
+    lastName = raw_input("Last Name: ")
+    print("Looking for: %s %s") % (firstName.upper(), lastName.upper())
+    try:
+        student = db.get((students.firstName == firstName.upper()) & (students.lastName == lastName.upper()))
+        print ("")
+        oldFname = student['firstName']
+        oldLname = student['lastName']
+        oldGrade = student['grade']
+
+        fNameString = oldFname
+        lNameString = oldLname
+        gradeString = oldGrade
+
+        print("First Name: %s\r\nLast Name: %s\r\nGrade: %s\r\n") % (fNameString,lNameString,gradeString)
+
+        raw_input("Press Enter to continue...")
+    except:
+        print "ERROR: Unable to find student record..."
+        raw_input("Press Enter to continue...")
+
+    mainMenu()
 
 def attendance(msg):
     clearScreen()
@@ -205,10 +321,10 @@ def mainMenu():
     print("")
     print("1: Take Attendance")
     print("2: Add Student")
-    print("3: Edit Student [KINDA WORKING]")
+    print("3: Edit Student")
     print("4: Remove Student")
-    print("5: Search [NOT WORKING]")
-    print("6: Print Barcodes [Internet connection required]")
+    print("5: Search for Student")
+    print("6: Print Barcodes [Internet required]")
     print("7: Report [NOT WORKING]")
     print("")
     print("0: Exit")
@@ -224,9 +340,9 @@ def mainMenu():
     elif(mode == '4'):
         remove()
     elif(mode == '5'):
-        mainMenu()
+        search()
     elif(mode == '6'):
-        genBarcodes()
+        printBarcodes()
     elif(mode == '7'):
         mainMenu()
     elif(mode == '0'):
